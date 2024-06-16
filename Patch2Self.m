@@ -3,6 +3,18 @@ function [denoised_arr] = Patch2Self( ...
 )
 % PATCH2SELF (MATLAB reimplementation)
 %
+% Inputs: 
+%  data -- DWIs as a 4-D array of shape H x W x D x N, where N is the number of DWIs (including B0s)
+%  bvals -- b-values of the DWIs of shape N x 1 (including B0s)
+%  patch_radius -- radius of the 3D patches (e.g., [d, d, d] would correspond to a patch of size [2d+1, 2d+1, 2d+1]), default: [0, 0, 0]
+%  model -- model to use for denoising, either "ols" or "ridge" ("lasso" supported yet), default: "ols"
+%  b0_threshold -- threshold to separate B0s from DWIs (e.g., 50), default: 50
+%  alpha -- regularization parameter for ridge regression, default: 0.01
+%  b0_denoising -- whether to denoise B0s or not, default: true
+%
+% Outputs:
+%  denoised_arr -- denoised DWIs as a 4-D array of shape H x W x D x N
+%
 % References:
 % [Fadnavis20] S. Fadnavis, J. Batson, E. Garyfallidis, Patch2Self:
 %              Denoising Diffusion MRI with Self-supervised Learning,
@@ -12,6 +24,31 @@ function [denoised_arr] = Patch2Self( ...
 % https://github.com/dipy/dipy/blob/master/dipy/denoise/patch2self.py
 % 
 % Kaibo, 2024
+
+    assert(nargin >= 2, "Please provide at least data and bvals as input arguments")
+    if nargin < 3
+        patch_radius = [0, 0, 0];
+    end
+    if nargin < 4
+        model = "ols";
+    end
+    if nargin < 5
+        b0_threshold = 50;
+    end
+    if nargin < 6
+        alpha = 0.01;
+    end
+    if nargin < 7
+        b0_denoising = true;
+    end
+
+
+    assert(ndims(data) == 4, "Input data must be a 4-D array")
+    assert(size(data, 4) == length(bvals), "Number of volumes must match number of bvals")
+    assert(length(patch_radius) == 3, "Patch radius must be a 3-element vector")
+    assert(ismember(model, ["ols", "ridge"]), "Model must be either 'ols' or 'ridge'")
+    assert(isscalar(b0_threshold), "b0_threshold must be a scalar")
+    assert(isscalar(alpha), "alpha must be a scalar")
 
     % segregates volumes by b0 threshold
     b0_idx = bvals <= b0_threshold;
